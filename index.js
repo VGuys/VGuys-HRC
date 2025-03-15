@@ -1,77 +1,58 @@
-const http = require('http');
-const url = require('url');
-const fs = require('fs');
-const path = require('path');
-const healthRiskCalculator = require('./health_risk');
-
-const server = http.createServer((req, res) => {
-    const parsedUrl = url.parse(req.url, true);
-    const pathname = parsedUrl.pathname;
-
-    console.log(`Received ${req.method} request for ${pathname}`);
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end();
-        return;
+document.getElementById("riskForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+  
+    const age = parseInt(document.getElementById("age").value, 10);
+    const height = parseFloat(document.getElementById("height").value);
+    const weight = parseFloat(document.getElementById("weight").value);
+    const systolic = parseInt(document.getElementById("systolic").value, 10);
+    const diastolic = parseInt(document.getElementById("diastolic").value, 10);
+  
+    const checkboxes = document.querySelectorAll('input[name="familyHistory"]:checked');
+    const familyHistory = Array.from(checkboxes).map(cb => cb.value);
+  
+    const errorMsg = document.getElementById("errorMsg");
+    const resultDiv = document.getElementById("result");
+    errorMsg.textContent = "";
+    resultDiv.innerHTML = "";
+  
+    // Input validation
+    if (isNaN(age) || age <= 0 ||
+        isNaN(height) || height < 60 ||
+        isNaN(weight) || weight <= 0 ||
+        isNaN(systolic) || systolic <= 0 ||
+        isNaN(diastolic) || diastolic <= 0) {
+      errorMsg.textContent = "Please ensure all values are positive and height is at least 60 cm.";
+      return;
     }
-
-    if (pathname === '/' || pathname === '/index.html') {
-        fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-            if (err) {
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('Internal Server Error');
-                return;
-            }
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(data);
-        });
-        return;
+  
+    // Send to backend
+    try {
+      const response = await fetch('/api/calculate-risk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ age, height, weight, systolic, diastolic, familyHistory })
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        resultDiv.innerHTML = `
+          <h3>Summary</h3>
+          <ul>
+            <li><strong>Age:</strong> ${age}</li>
+            <li><strong>BMI:</strong> ${data.bmi}</li>
+            <li><strong>Blood Pressure:</strong> ${systolic}/${diastolic} mmHg</li>
+            <li><strong>Family History:</strong> ${familyHistory.length ? familyHistory.join(', ') : "None"}</li>
+          </ul>
+          <h3>Risk Category: <span>${data.riskCategory}</span></h3>
+          <p>Risk Score: ${data.riskScore}</p>
+        `;
+      } else {
+        errorMsg.textContent = data.error || "Something went wrong.";
+      }
+  
+    } catch (err) {
+      errorMsg.textContent = "Failed to connect to server.";
     }
-
-    // Serve static files (styles.css, script.js)
-    if (pathname.endsWith('.css') || pathname.endsWith('.js')) {
-        const ext = path.extname(pathname).slice(1); // 'css' or 'js'
-        const filePath = path.join(__dirname, pathname);
-        fs.readFile(filePath, (err, data) => {
-            if (err) {
-                res.writeHead(404, { 'Content-Type': 'text/plain' });
-                res.end('File not found');
-                return;
-            }
-            res.writeHead(200, { 'Content-Type': ext === 'css' ? 'text/css' : 'application/javascript' });
-            res.end(data);
-        });
-        return;
-    }
-
-    if (pathname === '/api/calculate-risk' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', () => {
-            try {
-                const inputData = JSON.parse(body);
-                const result = healthRiskCalculator(inputData);
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(result));
-            } catch (err) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: err.message }));
-            }
-        });
-        return;
-    }
-
-    // Default 404
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
-});
-
-const PORT = process.env.PORT || 1337;
-server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+  });
+  
