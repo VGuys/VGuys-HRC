@@ -1,62 +1,60 @@
-const http = require('http');
-const fs = require('fs');
+module.exports = async function (context, req) {
+  const riskCategories = {
+    low: "Low Risk",
+    moderate: "Moderate Risk",
+    high: "High Risk",
+    uninsurable: "Uninsurable",
+  };
 
-function calculateRisk(data) {
-  const { age, height, weight, systolic, diastolic, familyHistory } = data;
-  let score = 0;
-
-  // Age
-  if (age < 30) score += 0;
-  else if (age < 45) score += 10;
-  else if (age < 60) score += 20;
-  else score += 30;
-
-  // BMI
-  const bmi = weight / (height * height);
-  if (bmi < 18.5 || bmi > 34.9) score += 75; // considered high risk if very low or obese
-  else if (bmi >= 30) score += 75;
-  else if (bmi >= 25) score += 30;
-  else score += 0;
-
-  // Blood Pressure
-  if (systolic < 120 && diastolic < 80) score += 0;
-  else if (systolic < 130 && diastolic < 80) score += 15;
-  else if ((systolic < 140) || (diastolic < 90)) score += 30;
-  else if ((systolic < 180) || (diastolic < 120)) score += 75;
-  else score += 100;
-
-  // Family History
-  if (familyHistory.includes("diabetes")) score += 10;
-  if (familyHistory.includes("cancer")) score += 10;
-  if (familyHistory.includes("alzheimer")) score += 10;
-
-  // Risk Level
-  let risk = "uninsurable";
-  if (score <= 20) risk = "low risk";
-  else if (score <= 50) risk = "moderate risk";
-  else if (score <= 75) risk = "high risk";
-
-  return { score, risk };
-}
-
-// Backend server
-const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/assess') {
-    let body = '';
-    req.on('data', chunk => (body += chunk));
-    req.on('end', () => {
-      const data = JSON.parse(body);
-      const result = calculateRisk(data);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result));
-    });
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
+  function calculateBMI(height, weight) {
+    const heightInMeters = height / 100;
+    return (weight / (heightInMeters * heightInMeters)).toFixed(2);
   }
-});
 
-const PORT = process.env.PORT || 1337;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+  function calculateAgePoints(age) {
+    if (age < 30) return 0;
+    if (age < 45) return 10;
+    if (age < 60) return 20;
+    return 30;
+  }
+
+  function calculateBPPoints(systolic, diastolic) {
+    if (systolic < 120 && diastolic < 80) return 0;
+    if (systolic < 130 && diastolic < 80) return 15;
+    if (systolic < 140 || diastolic < 90) return 30;
+    if (systolic < 180 || diastolic < 120) return 75;
+    return 100;
+  }
+
+  function calculateFamilyHistoryPoints(history) {
+    let points = 0;
+    if (history.includes("diabetes")) points += 10;
+    if (history.includes("cancer")) points += 10;
+    if (history.includes("alzheimers")) points += 10;
+    return points;
+  }
+
+  const { age, height, weight, systolic, diastolic, familyHistory } = req.body;
+
+  const bmi = calculateBMI(height, weight);
+  const agePoints = calculateAgePoints(age);
+  const bmiPoints = bmi < 25 ? 0 : bmi < 30 ? 30 : 75;
+  const bpPoints = calculateBPPoints(systolic, diastolic);
+  const familyPoints = calculateFamilyHistoryPoints(familyHistory);
+
+  const totalRisk = agePoints + bmiPoints + bpPoints + familyPoints;
+
+  let riskCategory = "";
+  if (totalRisk <= 20) riskCategory = riskCategories.low;
+  else if (totalRisk <= 50) riskCategory = riskCategories.moderate;
+  else if (totalRisk <= 75) riskCategory = riskCategories.high;
+  else riskCategory = riskCategories.uninsurable;
+
+  context.res = {
+    body: {
+      riskCategory,
+      totalRisk,
+      bmi,
+    },
+  };
+};
