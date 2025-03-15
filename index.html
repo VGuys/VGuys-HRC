@@ -1,79 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V Guys Dice Roller API</title>
+  <meta charset="UTF-8">
+  <title>Health Risk Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      max-width: 600px;
+    }
+    label, input, button {
+      display: block;
+      margin: 10px 0;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+  </style>
 </head>
-
-<!-- Req 1
 <body>
-    <h2>Dice Roller API</h2>
-    <button onclick="testAPI()">Roll a Dice</button>
-    <p id="result"></p>
+  <h1>Health Risk Calculator</h1>
+  <p>Please enter the following health information to calculate insurance risk:</p>
 
-    <script>
-        function testAPI() {
-            fetch('https://your-api.azurewebsites.net/roll-dice?sides=6')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('result').innerText = "API Response: " + JSON.stringify(data);
-                })
-                .catch(error => console.error("Error:", error));
-        }
-    </script>
-</body>
- -->
+  <form id="riskForm">
+    <label>Age:
+      <input type="number" id="age" required>
+    </label>
 
-<!-- req 2 -->
+    <label>Height (in meters):
+      <input type="number" id="height" step="0.01" required>
+    </label>
 
-<body>
-    <h2>V Guys Dice Roller</h2>
-    <button onclick="rollDice()">Roll the Dice</button>
-    <button onclick="testCORS()">Test CORS Failure</button>
-    <p id="result"></p>
-    <p id="cors-error"></p>
+    <label>Weight (in kilograms):
+      <input type="number" id="weight" step="0.1" required>
+    </label>
 
-    <script>
-        const apiUrl = "https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/roll-dice?sides=6";
-        const corsUrl = "https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/cors-fail";
+    <label>Systolic Blood Pressure:
+      <input type="number" id="systolic" required>
+    </label>
 
-        // Wake up the API on page load
-        async function wakeUpServer() {
-            try {
-                await fetch(apiUrl);
-                console.log("Server woken up!");
-            } catch (error) {
-                console.error("Error waking up server:", error);
-            }
-        }
+    <label>Diastolic Blood Pressure:
+      <input type="number" id="diastolic" required>
+    </label>
 
-        // Function to roll dice via API
-        async function rollDice() {
-            try {
-                let response = await fetch(apiUrl);
-                let data = await response.json();
-                document.getElementById('result').innerText = "You rolled: " + data.roll;
-            } catch (error) {
-                console.error("Error fetching API:", error);
-                document.getElementById('result').innerText = "Error rolling dice!";
-            }
-        }
+    <fieldset>
+      <legend>Family History (Check all that apply):</legend>
+      <label><input type="checkbox" name="history" value="diabetes"> Diabetes</label>
+      <label><input type="checkbox" name="history" value="cancer"> Cancer</label>
+      <label><input type="checkbox" name="history" value="alzheimer"> Alzheimer's</label>
+    </fieldset>
 
-        // Function to test CORS failure
-        async function testCORS() {
-            try {
-                let response = await fetch(corsUrl);
-                let data = await response.json();
-                document.getElementById('cors-error').innerText = "CORS Test Response: " + JSON.stringify(data);
-            } catch (error) {
-                console.error("CORS Error:", error);
-                document.getElementById('cors-error').innerText = "CORS Error: Check console for details.";
-            }
-        }
+    <button type="submit">Calculate Risk</button>
+  </form>
 
-        // Wake up API when page loads
-        window.onload = wakeUpServer;
-    </script>
+  <h2 id="result"></h2>
+
+  <script src="index.js"></script>
 </body>
 </html>
