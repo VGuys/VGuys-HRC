@@ -33,6 +33,22 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Serve static files (styles.css, script.js)
+    if (pathname.endsWith('.css') || pathname.endsWith('.js')) {
+        const ext = path.extname(pathname).slice(1); // 'css' or 'js'
+        const filePath = path.join(__dirname, pathname);
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('File not found');
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': ext === 'css' ? 'text/css' : 'application/javascript' });
+            res.end(data);
+        });
+        return;
+    }
+
     if (pathname === '/api/calculate-risk' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
