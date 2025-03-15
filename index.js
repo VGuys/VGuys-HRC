@@ -1,48 +1,68 @@
-document.getElementById("riskForm").addEventListener("submit", function (event) {
-  event.preventDefault();
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const url = require('url');
+const dt = require('./datetime');
+const healthRiskCalculator = require('./health_risk');
 
-  const submitBtn = document.getElementById("submitBtn");
-  submitBtn.innerText = "Calculating...";
-  submitBtn.style.opacity = "0.7";
+const server = http.createServer((request, response) => {
+    const parsedUrl = url.parse(request.url, true);
+    const pathname = parsedUrl.pathname;
 
-  const age = parseInt(document.getElementById("age").value);
-  const height = parseInt(document.getElementById("height").value);
-  const weight = parseInt(document.getElementById("weight").value);
-  const systolic = parseInt(document.getElementById("systolic").value);
-  const diastolic = parseInt(document.getElementById("diastolic").value);
+    console.log(`Request received: ${request.url}`);
 
-  // Collect family history checkboxes
-  const familyHistory = [];
-  document.querySelectorAll('input[name="familyHistory"]:checked').forEach((checkbox) => {
-    familyHistory.push(checkbox.value);
-  });
+    // Enable CORS
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Validate inputs before sending request
-  if (isNaN(age) || isNaN(height) || isNaN(weight) || isNaN(systolic) || isNaN(diastolic)) {
-    alert("Please enter valid numbers for all fields.");
-    submitBtn.innerText = "Calculate Risk";
-    submitBtn.style.opacity = "1";
-    return;
-  }
+    if (request.method === 'OPTIONS') {
+        response.writeHead(204);
+        response.end();
+        return;
+    }
 
-  const data = { age, height, weight, systolic, diastolic, familyHistory };
+    // Serve frontend
+    if (pathname === '/' || pathname === '/index.html') {
+        fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+            if (err) {
+                response.writeHead(500, { 'Content-Type': 'text/plain' });
+                response.end('Internal Server Error');
+                return;
+            }
+            response.writeHead(200, { 'Content-Type': 'text/html' });
+            response.end(data);
+        });
+        return;
+    }
 
-  fetch("https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/api/calculate-risk", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-    .then((res) => res.json())
-    .then((result) => {
-      document.getElementById("result").style.display = "block";
-      document.getElementById("riskCategory").innerText = result.riskCategory;
-      document.getElementById("totalRisk").innerText = result.totalRisk;
-      document.getElementById("bmiResult").innerText = result.bmi;
-      document.getElementById("riskForm").reset();
-    })
-    .catch(() => alert("Failed to calculate risk. Please try again."))
-    .finally(() => {
-      submitBtn.innerText = "Calculate Risk";
-      submitBtn.style.opacity = "1";
-    });
+    // Health Risk Calculation API
+    if (pathname === '/api/calculate-risk' && request.method === 'POST') {
+        let body = '';
+        request.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        request.on('end', () => {
+            try {
+                const inputData = JSON.parse(body);
+                const risk = healthRiskCalculator(inputData);
+                response.writeHead(200, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({ risk }));
+            } catch (err) {
+                response.writeHead(400, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({ error: 'Invalid input data' }));
+            }
+        });
+        return;
+    }
+
+    // 404 fallback
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('Not Found');
+});
+
+const port = process.env.PORT || 1337;
+server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
 });
