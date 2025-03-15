@@ -1,82 +1,90 @@
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware for parsing JSON bodies
-app.use(express.json());
-
-// Risk categories based on score
-const riskCategories = {
+module.exports = async function (context, req) {
+  const riskCategories = {
     low: "Low Risk",
     moderate: "Moderate Risk",
     high: "High Risk",
-    uninsurable: "Uninsurable"
-};
+    uninsurable: "Uninsurable",
+  };
 
-// Function to calculate BMI
-function calculateBMI(height, weight) {
-    const heightInMeters = height / 100; // Convert height from cm to meters
+  function calculateBMI(height, weight) {
+    if (height <= 0 || weight <= 0) return null; // Prevent division errors
+    const heightInMeters = height / 100;
     return (weight / (heightInMeters * heightInMeters)).toFixed(2);
-}
+  }
 
-// Function to calculate age points
-function calculateAgePoints(age) {
+  function calculateAgePoints(age) {
     if (age < 30) return 0;
     if (age < 45) return 10;
     if (age < 60) return 20;
     return 30;
-}
+  }
 
-// Function to calculate blood pressure points
-function calculateBPPoints(systolic, diastolic) {
-    if (systolic < 120 && diastolic < 80) return 0; // Normal
-    if (systolic < 130 && diastolic < 80) return 15; // Elevated
-    if (systolic < 140 || diastolic < 90) return 30; // Stage 1
-    if (systolic < 180 || diastolic < 120) return 75; // Stage 2
-    return 100; // Crisis
-}
+  function calculateBPPoints(systolic, diastolic) {
+    if (systolic < 120 && diastolic < 80) return 0;
+    if (systolic < 130 && diastolic < 80) return 15;
+    if (systolic < 140 || diastolic < 90) return 30;
+    if (systolic < 180 || diastolic < 120) return 75;
+    return 100;
+  }
 
-// Function to calculate family history points
-function calculateFamilyHistoryPoints(familyHistory) {
+  function calculateFamilyHistoryPoints(history) {
+    if (!Array.isArray(history)) return 0;
     let points = 0;
-    if (familyHistory.includes('diabetes')) points += 10;
-    if (familyHistory.includes('cancer')) points += 10;
-    if (familyHistory.includes('alzheimers')) points += 10;
+    if (history.includes("diabetes")) points += 10;
+    if (history.includes("cancer")) points += 10;
+    if (history.includes("alzheimers")) points += 10;
     return points;
-}
+  }
 
-// API endpoint for calculating health risk
-app.post('/calculate-risk', (req, res) => {
-    const { age, height, weight, systolic, diastolic, familyHistory } = req.body;
+  // Extract input data
+  const { age, height, weight, systolic, diastolic, familyHistory } = req.body || {};
 
-    // Calculate BMI
-    const bmi = calculateBMI(height, weight);
+  // Collect error messages
+  let errors = [];
+  if (!age || age <= 0) errors.push("Age must be a positive number.");
+  if (!height || height <= 0) errors.push("Height must be a positive number.");
+  if (!weight || weight <= 0) errors.push("Weight must be a positive number.");
+  if (!systolic || systolic <= 0) errors.push("Systolic blood pressure must be a positive number.");
+  if (!diastolic || diastolic <= 0) errors.push("Diastolic blood pressure must be a positive number.");
+  if (!Array.isArray(familyHistory)) errors.push("Family history must be a valid list.");
 
-    // Calculate points
-    const agePoints = calculateAgePoints(age);
-    const bmiPoints = bmi < 25 ? 0 : (bmi < 30 ? 30 : 75);
-    const bpPoints = calculateBPPoints(systolic, diastolic);
-    const familyHistoryPoints = calculateFamilyHistoryPoints(familyHistory);
+  // If there are errors, return them to the user
+  if (errors.length > 0) {
+    context.res = {
+      status: 400,
+      body: { errors },
+    };
+    return;
+  }
 
-    // Total risk score
-    const totalRisk = agePoints + bmiPoints + bpPoints + familyHistoryPoints;
+  // Proceed with calculations if inputs are valid
+  const bmi = calculateBMI(height, weight);
+  if (!bmi) {
+    context.res = {
+      status: 400,
+      body: { errors: ["Invalid height or weight values."] },
+    };
+    return;
+  }
 
-    // Determine risk category
-    let riskCategory = "";
-    if (totalRisk <= 20) riskCategory = riskCategories.low;
-    else if (totalRisk <= 50) riskCategory = riskCategories.moderate;
-    else if (totalRisk <= 75) riskCategory = riskCategories.high;
-    else riskCategory = riskCategories.uninsurable;
+  const agePoints = calculateAgePoints(age);
+  const bmiPoints = bmi < 25 ? 0 : bmi < 30 ? 30 : 75;
+  const bpPoints = calculateBPPoints(systolic, diastolic);
+  const familyPoints = calculateFamilyHistoryPoints(familyHistory);
 
-    // Return the calculated results
-    res.json({
-        riskCategory,
-        totalRisk,
-        bmi
-    });
-});
+  const totalRisk = agePoints + bmiPoints + bpPoints + familyPoints;
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
+  let riskCategory = riskCategories.uninsurable;
+  if (totalRisk <= 20) riskCategory = riskCategories.low;
+  else if (totalRisk <= 50) riskCategory = riskCategories.moderate;
+  else if (totalRisk <= 75) riskCategory = riskCategories.high;
+
+  context.res = {
+    status: 200,
+    body: {
+      riskCategory,
+      totalRisk,
+      bmi,
+    },
+  };
+};
