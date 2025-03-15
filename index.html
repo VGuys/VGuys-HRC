@@ -2,59 +2,80 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>V Guys Health Risk Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Risk Calculator</title>
 </head>
 <body>
-    <h2>V Guys Health Risk Calculator</h2>
-
+    <h1>Health Risk Calculator</h1>
     <form id="healthForm">
-        <label>Age: <input type="number" name="age" required></label><br><br>
-        <label>Height (cm): <input type="number" name="height" required></label><br><br>
-        <label>Weight (kg): <input type="number" name="weight" required></label><br><br>
-        <label>Systolic BP: <input type="number" name="systolic" required></label><br><br>
-        <label>Diastolic BP: <input type="number" name="diastolic" required></label><br><br>
+        <label for="age">Age:</label>
+        <input type="number" id="age" required><br><br>
 
-        <fieldset>
-            <legend>Family Diseases (check all that apply):</legend>
-            <label><input type="checkbox" name="familyDiseases" value="diabetes"> Diabetes</label><br>
-            <label><input type="checkbox" name="familyDiseases" value="cancer"> Cancer</label><br>
-            <label><input type="checkbox" name="familyDiseases" value="Alzheimer’s"> Alzheimer’s</label><br>
-        </fieldset><br>
+        <label for="height">Height (cm):</label>
+        <input type="number" id="height" required><br><br>
+
+        <label for="weight">Weight (kg):</label>
+        <input type="number" id="weight" required><br><br>
+
+        <label for="systolic">Systolic Blood Pressure:</label>
+        <input type="number" id="systolic" required><br><br>
+
+        <label for="diastolic">Diastolic Blood Pressure:</label>
+        <input type="number" id="diastolic" required><br><br>
+
+        <label for="familyDiseases">Family Diseases (comma-separated):</label>
+        <input type="text" id="familyDiseases"><br><br>
 
         <button type="submit">Calculate Risk</button>
     </form>
 
-    <h3 id="result"></h3>
+    <h2>Risk Result</h2>
+    <div id="result">
+        <!-- The result will be displayed here -->
+    </div>
 
     <script>
-        document.getElementById('healthForm').addEventListener('submit', async function(event) {
+        document.getElementById('healthForm').addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            const form = event.target;
-            const formData = new FormData(form);
+            const age = document.getElementById('age').value;
+            const height = document.getElementById('height').value;
+            const weight = document.getElementById('weight').value;
+            const systolic = document.getElementById('systolic').value;
+            const diastolic = document.getElementById('diastolic').value;
+            const familyDiseases = document.getElementById('familyDiseases').value.split(',').map(disease => disease.trim());
 
-            const data = {
-                age: parseInt(formData.get('age')),
-                height: parseFloat(formData.get('height')),
-                weight: parseFloat(formData.get('weight')),
-                systolic: parseInt(formData.get('systolic')),
-                diastolic: parseInt(formData.get('diastolic')),
-                familyDiseases: formData.getAll('familyDiseases')
+            const requestData = {
+                age: parseInt(age),
+                height: parseInt(height),
+                weight: parseInt(weight),
+                systolic: parseInt(systolic),
+                diastolic: parseInt(diastolic),
+                familyDiseases: familyDiseases
             };
 
             try {
-                const res = await fetch('/health-risk', {
+                const response = await fetch('/health-risk', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
                 });
 
-                const result = await res.json();
-                document.getElementById('result').innerText = 
-                    `Risk Score: ${result.riskScore} | BMI: ${result.bmi} | Risk Category: ${result.riskCategory}`;
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <p>Risk Score: ${result.riskScore}</p>
+                        <p>Risk Category: ${result.riskCategory}</p>
+                        <p>BMI: ${result.bmi}</p>
+                    `;
+                } else {
+                    document.getElementById('result').innerText = 'Error: ' + result.error;
+                }
             } catch (error) {
-                document.getElementById('result').innerText = "Error calculating risk.";
-                console.error(error);
+                document.getElementById('result').innerText = 'Error: ' + error.message;
             }
         });
     </script>
