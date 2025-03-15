@@ -2,80 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Risk Calculator</title>
+    <title>V Guys Health Risk Calculator</title>
 </head>
 <body>
-    <h1>Health Risk Calculator</h1>
-    <form id="healthForm">
-        <label for="age">Age:</label>
-        <input type="number" id="age" required><br><br>
+    <h2>Health Risk Calculator</h2>
+    <form id="riskForm">
+        Age: <input type="number" name="age" required min="1"><br>
+        
+        Height (cm): <input type="number" name="height" required min="1"><br>
+        Weight (kg): <input type="number" name="weight" required min="1"><br>
 
-        <label for="height">Height (cm):</label>
-        <input type="number" id="height" required><br><br>
+        Systolic Blood Pressure (optional): <input type="number" name="systolic" min="1"><br>
+        Diastolic Blood Pressure (optional): <input type="number" name="diastolic" min="1"><br>
 
-        <label for="weight">Weight (kg):</label>
-        <input type="number" id="weight" required><br><br>
-
-        <label for="systolic">Systolic Blood Pressure:</label>
-        <input type="number" id="systolic" required><br><br>
-
-        <label for="diastolic">Diastolic Blood Pressure:</label>
-        <input type="number" id="diastolic" required><br><br>
-
-        <label for="familyDiseases">Family Diseases (comma-separated):</label>
-        <input type="text" id="familyDiseases"><br><br>
+        Family Disease History (Select all that apply):<br>
+        <label><input type="checkbox" name="familyHistory" value="diabetes"> Diabetes</label><br>
+        <label><input type="checkbox" name="familyHistory" value="cancer"> Cancer</label><br>
+        <label><input type="checkbox" name="familyHistory" value="heart disease"> Heart Disease</label><br><br>
 
         <button type="submit">Calculate Risk</button>
     </form>
 
-    <h2>Risk Result</h2>
-    <div id="result">
-        <!-- The result will be displayed here -->
-    </div>
+    <p id="result"></p>
 
     <script>
-        document.getElementById('healthForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
+        const apiUrl = "https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/api/calculate-risk";
 
-            const age = document.getElementById('age').value;
-            const height = document.getElementById('height').value;
-            const weight = document.getElementById('weight').value;
-            const systolic = document.getElementById('systolic').value;
-            const diastolic = document.getElementById('diastolic').value;
-            const familyDiseases = document.getElementById('familyDiseases').value.split(',').map(disease => disease.trim());
+        document.getElementById("riskForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-            const requestData = {
-                age: parseInt(age),
-                height: parseInt(height),
-                weight: parseInt(weight),
-                systolic: parseInt(systolic),
-                diastolic: parseInt(diastolic),
-                familyDiseases: familyDiseases
+            const form = e.target;
+            const familyHistory = [];
+            document.querySelectorAll('input[name="familyHistory"]:checked').forEach(checkbox => {
+                familyHistory.push(checkbox.value);
+            });
+
+            const data = {
+                age: parseInt(form.age.value),
+                height: parseFloat(form.height.value),
+                weight: parseFloat(form.weight.value),
+                systolic: form.systolic.value ? parseInt(form.systolic.value) : null,
+                diastolic: form.diastolic.value ? parseInt(form.diastolic.value) : null,
+                familyHistory: familyHistory
             };
 
             try {
-                const response = await fetch('/health-risk', {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestData)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
 
                 const result = await response.json();
-
-                if (response.ok) {
-                    document.getElementById('result').innerHTML = `
-                        <p>Risk Score: ${result.riskScore}</p>
-                        <p>Risk Category: ${result.riskCategory}</p>
-                        <p>BMI: ${result.bmi}</p>
-                    `;
-                } else {
-                    document.getElementById('result').innerText = 'Error: ' + result.error;
-                }
+                document.getElementById("result").innerText = `Health Risk: ${result.riskCategory}, BMI: ${result.bmi}, Score: ${result.riskScore}`;
             } catch (error) {
-                document.getElementById('result').innerText = 'Error: ' + error.message;
+                document.getElementById("result").innerText = "Error: " + error.message;
             }
         });
     </script>
