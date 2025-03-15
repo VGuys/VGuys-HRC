@@ -3,7 +3,7 @@ const path = require('path');
 const http = require('http');
 const url = require('url');
 const dt = require('./datetime');
-const healthRiskCalculator = require('./health_risk');
+const healthRiskCalculator = require('./calculateHealthRisk');
 
 const server = http.createServer((request, response) => {
     const parsedUrl = url.parse(request.url, true);
