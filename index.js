@@ -26,7 +26,7 @@ document.getElementById("riskForm").addEventListener("submit", function (event) 
     };
 
     // Send the data to the server using fetch
-    fetch("https://vguys-healthcalculator-gkdrhvemhphfabf6.uaenorth-01.azurewebsites.net/calculate-risk", {
+    fetch("https://https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/calculate-risk", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
