@@ -37,25 +37,29 @@ const server = http.createServer((request, response) => {
     }
 
     // Health Risk Calculation API
-    if (pathname === '/api/calculate-risk' && request.method === 'POST') {
+    if (pathname === '/health-risk' && request.method === 'POST') {
         let body = '';
         request.on('data', chunk => {
             body += chunk.toString();
         });
-
+    
         request.on('end', () => {
             try {
-                const inputData = JSON.parse(body);
-                const risk = healthRiskCalculator(inputData);
+                const data = JSON.parse(body);
+                const calculateHealthRisk = require('./calculateHealthRisk');
+                const result = calculateHealthRisk(data);
+    
                 response.writeHead(200, { 'Content-Type': 'application/json' });
-                response.end(JSON.stringify({ risk }));
+                response.end(JSON.stringify(result));
             } catch (err) {
+                console.error(err);
                 response.writeHead(400, { 'Content-Type': 'application/json' });
-                response.end(JSON.stringify({ error: 'Invalid input data' }));
+                response.end(JSON.stringify({ error: 'Invalid input or server error' }));
             }
         });
+    
         return;
-    }
+    }    
 
     // 404 fallback
     response.writeHead(404, { 'Content-Type': 'text/plain' });

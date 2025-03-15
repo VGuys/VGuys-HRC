@@ -1,34 +1,61 @@
 function calculateHealthRisk(data) {
-    const { age, bmi, smoker, activityLevel } = data;
+    const { age, height, weight, systolic, diastolic, familyDiseases } = data;
 
-    if (!age || !bmi || typeof smoker === 'undefined' || !activityLevel) {
-        throw new Error('Missing required fields');
+    if (
+        typeof age === 'undefined' || 
+        typeof height === 'undefined' || 
+        typeof weight === 'undefined' ||
+        typeof systolic === 'undefined' ||
+        typeof diastolic === 'undefined' ||
+        !Array.isArray(familyDiseases)
+    ) {
+        throw new Error('Missing or invalid fields');
     }
 
     let riskScore = 0;
 
-    if (age > 45) riskScore += 2;
-    if (bmi > 30) riskScore += 2;
-    if (smoker) riskScore += 3;
+    // Age points
+    if (age < 30) riskScore += 0;
+    else if (age < 45) riskScore += 10;
+    else if (age < 60) riskScore += 20;
+    else riskScore += 30;
 
-    switch (activityLevel.toLowerCase()) {
-        case 'low':
-            riskScore += 2;
-            break;
-        case 'medium':
-            riskScore += 1;
-            break;
-        case 'high':
-            break;
-        default:
-            throw new Error('Invalid activity level');
+    // BMI Calculation
+    const heightInMeters = height / 100;
+    const bmi = weight / (heightInMeters * heightInMeters);
+    if (bmi >= 18.5 && bmi <= 24.9) riskScore += 0;
+    else if (bmi >= 25 && bmi <= 29.9) riskScore += 30;
+    else riskScore += 75;
+
+    // Blood Pressure points
+    if (systolic < 120 && diastolic < 80) riskScore += 0;
+    else if (systolic < 130 && diastolic < 80) riskScore += 15;
+    else if (systolic < 140 || diastolic < 90) riskScore += 30;
+    else if (systolic < 180 || diastolic < 120) riskScore += 75;
+    else riskScore += 100;
+
+    // Family diseases
+    const diseasePoints = {
+        diabetes: 10,
+        cancer: 10,
+        'alzheimer’s': 10
+    };
+
+    for (const disease of familyDiseases) {
+        const key = disease.toLowerCase();
+        if (diseasePoints[key]) riskScore += diseasePoints[key];
     }
 
+    // Risk Category
     let riskCategory = 'Low';
-    if (riskScore >= 7) riskCategory = 'High';
-    else if (riskScore >= 4) riskCategory = 'Moderate';
+    if (riskScore >= 150) riskCategory = 'High';
+    else if (riskScore >= 75) riskCategory = 'Moderate';
 
-    return riskCategory;
+    return {
+        riskScore,
+        riskCategory,
+        bmi: bmi.toFixed(1)
+    };
 }
 
 module.exports = calculateHealthRisk;

@@ -5,53 +5,56 @@
     <title>V Guys Health Risk Calculator</title>
 </head>
 <body>
-    <h2>Health Risk Calculator</h2>
-    <form id="riskForm">
-        Age: <input type="number" name="age" required><br>
-        BMI: <input type="number" name="bmi" step="0.1" required><br>
-        Smoker: 
-        <select name="smoker">
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-        </select><br>
-        Activity Level:
-        <select name="activityLevel" required>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-        </select><br><br>
+    <h2>V Guys Health Risk Calculator</h2>
+
+    <form id="healthForm">
+        <label>Age: <input type="number" name="age" required></label><br><br>
+        <label>Height (cm): <input type="number" name="height" required></label><br><br>
+        <label>Weight (kg): <input type="number" name="weight" required></label><br><br>
+        <label>Systolic BP: <input type="number" name="systolic" required></label><br><br>
+        <label>Diastolic BP: <input type="number" name="diastolic" required></label><br><br>
+
+        <fieldset>
+            <legend>Family Diseases (check all that apply):</legend>
+            <label><input type="checkbox" name="familyDiseases" value="diabetes"> Diabetes</label><br>
+            <label><input type="checkbox" name="familyDiseases" value="cancer"> Cancer</label><br>
+            <label><input type="checkbox" name="familyDiseases" value="Alzheimer’s"> Alzheimer’s</label><br>
+        </fieldset><br>
+
         <button type="submit">Calculate Risk</button>
     </form>
 
-    <p id="result"></p>
+    <h3 id="result"></h3>
 
     <script>
-        const apiUrl = "https://vguys-hrc-cwc0cpe8fgf9bvdd.uaenorth-01.azurewebsites.net/api/calculate-risk";
+        document.getElementById('healthForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
 
-        document.getElementById("riskForm").addEventListener("submit", async function (e) {
-            e.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
 
-            const form = e.target;
             const data = {
-                age: parseInt(form.age.value),
-                bmi: parseFloat(form.bmi.value),
-                smoker: form.smoker.value === "true",
-                activityLevel: form.activityLevel.value
+                age: parseInt(formData.get('age')),
+                height: parseFloat(formData.get('height')),
+                weight: parseFloat(formData.get('weight')),
+                systolic: parseInt(formData.get('systolic')),
+                diastolic: parseInt(formData.get('diastolic')),
+                familyDiseases: formData.getAll('familyDiseases')
             };
 
             try {
-                const response = await fetch(apiUrl, {
+                const res = await fetch('/health-risk', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
 
-                const result = await response.json();
-                document.getElementById("result").innerText = "Health Risk: " + result.risk;
+                const result = await res.json();
+                document.getElementById('result').innerText = 
+                    `Risk Score: ${result.riskScore} | BMI: ${result.bmi} | Risk Category: ${result.riskCategory}`;
             } catch (error) {
-                document.getElementById("result").innerText = "Error: " + error.message;
+                document.getElementById('result').innerText = "Error calculating risk.";
+                console.error(error);
             }
         });
     </script>
