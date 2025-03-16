@@ -33,9 +33,9 @@ function calculateHealthRisk(data) {
     }
 
     // Family history scoring
-    if (familyHistory.includes("Diabetes")) riskScore += 10;
-    if (familyHistory.includes("Dancer")) riskScore += 10;
-    if (familyHistory.includes("Heart Disease")) riskScore += 10;
+    if (familyHistory.includes("diabetes")) riskScore += 10;
+    if (familyHistory.includes("cancer")) riskScore += 10;
+    if (familyHistory.includes("heart disease")) riskScore += 10;
 
     // Risk category
     let riskCategory = 'Low Risk';
